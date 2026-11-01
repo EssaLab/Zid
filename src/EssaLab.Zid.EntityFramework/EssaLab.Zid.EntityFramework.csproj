@@ -1,0 +1,32 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <!-- NuGet -->
+    <PackageId>EssaLab.Zid.EntityFramework</PackageId>
+    <Description>Entity Framework Core value converters and conventions for EssaLab.Zid.</Description>
+    <PackageTags>id-generator;entity-framework-core;ef-core;database;converter</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+  </PropertyGroup>
+  
+  
+  <ItemGroup>
+    <!-- EF Core package  -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.0" />  
+  </ItemGroup>
+  
+  
+  <ItemGroup>
+    <!-- link primary project -->
+    <ProjectReference Include="..\EssaLab.Zid\EssaLab.Zid.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+</Project>
