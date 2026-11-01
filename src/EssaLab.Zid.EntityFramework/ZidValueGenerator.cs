@@ -18,6 +18,6 @@ public class ZidValueGenerator : ValueGenerator<Zid>
     /// Generates a new <see cref="Zid"/> value for the specified entry.
     /// </summary>
     /// <param name="entry">The change tracking entry for the entity.</param>
-    /// .<returns>A newly generated <see cref="Zid"/>.</returns>
+    /// <returns>A newly generated <see cref="Zid"/>.</returns>
     public override Zid Next(EntityEntry entry) => Zid.Next();
 }

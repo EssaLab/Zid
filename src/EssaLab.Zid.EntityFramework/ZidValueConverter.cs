@@ -13,6 +13,6 @@ public class ZidValueConverter : ValueConverter<Zid, long>
     /// </summary>
     public ZidValueConverter() : base(
         zid => zid.Value,
-        value => new Zid(value))
+        value => value == 0 ? default : new Zid(value))
     { }
 }

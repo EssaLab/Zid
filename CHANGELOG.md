@@ -30,3 +30,12 @@ The format is based on [Keep a Changelog](https.keepachangelog.com/en/1.0.0/), a
 - **Entity Framework Core Package (`EssaLab.Zid.EntityFramework`):**
   - Added custom `ZidValueGenerator` with `GeneratesTemporaryValues = false` to prevent tracking collisions and identity errors when inserting entities.
   - Automated primary key value generator factory assignment inside `ApplyZidConventions()` so `Zid.Next()` is called automatically for primary keys without manual entity configuration.
+
+## [1.0.2] - 2026-11-01
+
+### Added / Improved
+- **Entity Framework Core Package (`EssaLab.Zid.EntityFramework`):**
+  - Added `AddZid()` extension method for `ModelConfigurationBuilder` to enable global pre-convention registration of `ZidValueConverter` and `ZidValueComparer`.
+  - Added `ZidValueComparer` to optimize entity tracking and prevent identity conflicts for the `Zid` struct.
+  - Enhanced `ZidValueConverter` with safe default/zero value handling.
+  - Updated documentation and quick-start examples in `README.md`.

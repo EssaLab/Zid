@@ -10,8 +10,7 @@ dotnet add package EssaLab.Zid.EntityFramework
 
 ## 💻 Quick Start
 
-Configure your `DbContext` using the provided EF Core extensions:
-
+Configure your `DbContext` using both pre-convention global registration and model conventions:
 ```csharp
 using EssaLab.Zid.EntityFramework;
 using Microsoft.EntityFrameworkCore;
@@ -20,11 +19,17 @@ public class AppDbContext : DbContext
 {
     public DbSet<User> Users => Set<User>();
 
+    // 1. Register Zid globally before model discovery to prevent validation errors
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        base.ConfigureConventions(configurationBuilder);
+        configurationBuilder.AddZid();
+    }
+
+    // 2. Apply database column types and automated client-side primary key generation
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-
-        // Automatically configure Zid value conversions across all entity properties
         modelBuilder.ApplyZidConventions();
     }
 }
