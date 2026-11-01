@@ -7,11 +7,11 @@
 <p align="center">
   <a href="https://www.nuget.org/packages/EssaLab.Zid"><img src="https://img.shields.io/nuget/v/EssaLab.Zid.svg?logo=nuget" alt="NuGet Version" /></a>
   <a href="https://www.nuget.org/packages/EssaLab.Zid"><img src="https://img.shields.io/nuget/dt/EssaLab.Zid?logo=nuget&color=blue" alt="NuGet Downloads" /></a>
-  <a href="https://github.com/Redaessa7/EssaLab.Zid/actions"><img src="https://img.shields.io/github/actions/workflow/status/Redaessa7/EssaLab.Zid/ci.yml?branch=main&logo=github" alt="Build Status" /></a>
+  <a href="https://github.com/EssaLab/Zid/actions"><img src="https://img.shields.io/github/actions/workflow/status/EssaLab/Zid/ci.yml?branch=main&logo=github" alt="Build Status" /></a>
   <a href="SECURITY.md"><img src="https://img.shields.io/badge/security-policy-brightgreen?logo=shield" alt="Security Policy" /></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/Redaessa7/EssaLab.Zid?color=blue" alt="License" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/EssaLab/Zid?color=blue" alt="License" /></a>
   <a href="https://dotnet.microsoft.com/"><img src="https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet" alt=".NET Version" /></a>
-  <a href="https://github.com/Redaessa7/EssaLab.Zid/stargazers"><img src="https://img.shields.io/github/stars/Redaessa7/EssaLab.Zid?style=social" alt="GitHub Stars" /></a>
+  <a href="https://github.com/EssaLab/Zid/stargazers"><img src="https://img.shields.io/github/stars/EssaLab/Zid?style=social" alt="GitHub Stars" /></a>
 </p>
 
 **EssaLab.Zid** is an enterprise-grade, lock-free, zero-allocation distributed ID generator for .NET. Inspired by Twitter's Snowflake algorithm, it generates 64-bit time-sortable unique integers optimized for maximum database indexing efficiency, ultra-high throughput, and Base62 URL safety.

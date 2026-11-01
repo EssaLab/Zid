@@ -11,6 +11,8 @@
     <PackageTags>id-generator;entity-framework-core;ef-core;database;converter</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+
+    <Version>1.0.1</Version>
   </PropertyGroup>
   
   

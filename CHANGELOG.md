@@ -23,3 +23,10 @@ The format is based on [Keep a Changelog](https.keepachangelog.com/en/1.0.0/), a
 - **Entity Framework Core Package (`EssaLab.Zid.EntityFramework`):**
   - Added `ZidValueConverter` for seamless conversion between `Zid` struct and database `BIGINT`.
   - Added `ApplyZidConventions()` extension method for `ModelBuilder` to automatically map all `Zid` entity properties.
+
+## [1.0.1] - 2026-11-1
+
+### Fixed / Changed
+- **Entity Framework Core Package (`EssaLab.Zid.EntityFramework`):**
+  - Added custom `ZidValueGenerator` with `GeneratesTemporaryValues = false` to prevent tracking collisions and identity errors when inserting entities.
+  - Automated primary key value generator factory assignment inside `ApplyZidConventions()` so `Zid.Next()` is called automatically for primary keys without manual entity configuration.
