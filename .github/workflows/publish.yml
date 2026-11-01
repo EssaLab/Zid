@@ -38,6 +38,8 @@ jobs:
       - name: NuGet login (OIDC -> temporary API key)
         id: login
         uses: NuGet/login@v1
+        with:
+          user: EssaLab
 
       # 2. Securely push to NuGet using the temporary API key
       - name: Push Package to NuGet.org
