@@ -39,3 +39,11 @@ The format is based on [Keep a Changelog](https.keepachangelog.com/en/1.0.0/), a
   - Added `ZidValueComparer` to optimize entity tracking and prevent identity conflicts for the `Zid` struct.
   - Enhanced `ZidValueConverter` with safe default/zero value handling.
   - Updated documentation and quick-start examples in `README.md`.
+
+## [1.0.3] - 2026-11-01
+
+### Changed / Unified
+- **Global Ecosystem Configuration:**
+  - Migrated versioning architecture to a unified system using `Directory.Build.props` across all packages (`EssaLab.Zid`, `EssaLab.Zid.EntityFramework`, and `EssaLab.Zid.Extensions.DependencyInjection`).
+  - Standardized package metadata, logos, MIT licensing, and repository tracking configurations.
+  - Aligned all package dependencies to firmly target synchronized ecosystem version releases, eliminating potential runtime version mismatch bugs.
