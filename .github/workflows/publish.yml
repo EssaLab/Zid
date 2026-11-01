@@ -39,7 +39,7 @@ jobs:
         id: login
         uses: NuGet/login@v1
         with:
-          user: EssaLab
+          user: Redaessa
 
       # 2. Securely push to NuGet using the temporary API key
       - name: Push Package to NuGet.org
