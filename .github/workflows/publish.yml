@@ -36,4 +36,4 @@ jobs:
         
       # 7. Securely push to NuGet via OIDC Trusted Publishing (No API Key Required!)
       - name: Push Package to NuGet.org
-        run: dotnet nuget push ./nupkg/*.nupkg --source https://nuget.org --skip-duplicate
+        run: dotnet nuget push ./nupkg/*.nupkg --source https://api.nuget.org/v3/index.json --skip-duplicate
