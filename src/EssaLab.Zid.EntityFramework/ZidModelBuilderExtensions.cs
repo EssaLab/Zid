@@ -20,16 +20,24 @@ public static class ZidModelBuilderExtensions
         {
             foreach (var property in entityType.GetProperties())
             {
-                if (property.ClrType != typeof(Zid) && property.ClrType != typeof(Zid?)) continue;
+                // Support both standard Zid and nullable Zid properties
+                if (property.ClrType != typeof(Zid) && property.ClrType != typeof(Zid?)) 
+                    continue;
                 
-                // Explicitly set database column type to BIGINT for non-nullable Zid properties
-                if (property.ClrType != typeof(Zid)) continue;
+                // Set the database column type to bigint for both types
                 property.SetColumnType("bigint");
                         
-                // Automate key generation if it's a primary key
-                if (!property.IsPrimaryKey()) continue;
+                // Skip value generation setup if the property is not a primary key
+                if (!property.IsPrimaryKey()) 
+                    continue;
+                
+                // Enable client-side value generation using ZidValueGenerator
                 property.SetValueGeneratorFactory((_, _) => new ZidValueGenerator());
                 property.ValueGenerated = ValueGenerated.OnAdd;
+
+                // Prevent database providers (like SQL Server) from configuring the column as an identity (IDENTITY(1,1))
+                property.SetAnnotation("Relational:ValueGenerationStrategy", null);
+                property.SetAnnotation("SqlServer:ValueGenerationStrategy", null);
             }
         }
 
