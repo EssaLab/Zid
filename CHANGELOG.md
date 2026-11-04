@@ -47,3 +47,10 @@ The format is based on [Keep a Changelog](https.keepachangelog.com/en/1.0.0/), a
   - Migrated versioning architecture to a unified system using `Directory.Build.props` across all packages (`EssaLab.Zid`, `EssaLab.Zid.EntityFramework`, and `EssaLab.Zid.Extensions.DependencyInjection`).
   - Standardized package metadata, logos, MIT licensing, and repository tracking configurations.
   - Aligned all package dependencies to firmly target synchronized ecosystem version releases, eliminating potential runtime version mismatch bugs.
+
+## [1.0.4] - 2026-11-01
+
+### Fixed
+- **Entity Framework Core Package (`EssaLab.Zid.EntityFramework`):**
+  - Fixed SQL Server primary key generation strategy by explicitly disabling database-level identity auto-generation (`IDENTITY(1,1)`) using provider-agnostic string-based annotations to resolve compilation errors and prevent runtime mapping conflicts.
+  - Fixed nullable `Zid?` property type mapping in `ApplyZidConventions()` to ensure `bigint` column types are correctly applied to both standard and nullable primary/foreign keys.
