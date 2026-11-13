@@ -22,8 +22,4 @@
     <ProjectReference Include="..\..\src\EssaLab.Zid\EssaLab.Zid.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\..\src\EssaLab.Zid\EssaLab.Zid.csproj" />
-  </ItemGroup>
-
 </Project>

@@ -1,5 +1,6 @@
 ﻿namespace EssaLab.Zid.Tests;
 
+[Collection(ZidGlobalState.Name)]
 public class ZidTests
 {
     [Fact]

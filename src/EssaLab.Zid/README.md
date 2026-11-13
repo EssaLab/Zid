@@ -1,13 +1,13 @@
 # EssaLab.Zid
 
-A high-performance, zero-allocation, distributed 64-bit ID generator (Snowflake-based) for .NET. Designed for high concurrency, database index optimization, and clean architectural purity.
+A lock-free, distributed 64-bit ID generator (Snowflake-based) for .NET. Designed for high concurrency and database index friendliness.
 
 ## 🚀 Features
 
-- **Lightning Fast:** Single-call generation in single-digit nanoseconds with **0 B heap allocation**.
+- **Lock-Free & Allocation-Free Generation:** `Zid.Next()` allocates nothing. Sustained throughput is up to **256 IDs/ms per node** (~220k IDs/sec).
 - **Time-Sortable:** Naturally ordered chronologically to prevent B-Tree index fragmentation in databases (Entity Framework Core friendly).
 - **Compact & Efficient:** 64-bit integer (`BIGINT`) storage layout.
-- **Base62 Encoding:** Built-in zero-allocation short string formatting and parsing (`ToShort()` / `TryParse()`).
+- **Base62 Short Codes:** Built-in formatting and parsing (`ToShort()` allocates its result string; `TryParse()` and `TryFormat("S")` do not). Light obfuscation and typo detection only, **not a security feature**.
 
 ## 📦 Installation
 

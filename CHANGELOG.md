@@ -2,7 +2,7 @@
 
 All notable changes to **EssaLab.Zid** will be documented in this file.
 
-The format is based on [Keep a Changelog](https.keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
@@ -54,3 +54,22 @@ The format is based on [Keep a Changelog](https.keepachangelog.com/en/1.0.0/), a
 - **Entity Framework Core Package (`EssaLab.Zid.EntityFramework`):**
   - Fixed SQL Server primary key generation strategy by explicitly disabling database-level identity auto-generation (`IDENTITY(1,1)`) using provider-agnostic string-based annotations to resolve compilation errors and prevent runtime mapping conflicts.
   - Fixed nullable `Zid?` property type mapping in `ApplyZidConventions()` to ensure `bigint` column types are correctly applied to both standard and nullable primary/foreign keys.
+## [1.0.5] - 2026-11-13
+
+### Fixed
+- **Core (`EssaLab.Zid`):**
+  - `Zid.Initialize` / `AddZid` silently ignored custom options (`MachineId`, `Epoch`, `MaskKey`) because the static constructor had already marked the generator as initialized. Custom options are now applied. The generator is initialized lazily and its configuration is frozen on first `Next()`: identical re-initialization is a no-op, conflicting re-initialization throws `InvalidOperationException` (override for tests only with `ZID_ALLOW_REINIT=true`).
+  - Added `ZidOptions.Validate()`, called by `Initialize`: `MachineId` must be 0..1023 (previously 2000 silently collided with node 976 and -1 produced negative IDs); `Epoch` must not be in the future, before 1970, or already exhausted (a future epoch previously made `Next()` spin forever).
+  - An invalid `ZID_MACHINE_ID` environment variable now throws instead of silently falling back to a random machine ID.
+  - `Next()` throws a clear `InvalidOperationException` if the system clock is earlier than the epoch.
+  - Epoch is normalized to UTC.
+
+### Changed
+- `Zid.MaxMachineId` is now public.
+
+### Documentation
+- Corrected benchmark figures (sustained generation is ~4.3 µs/ID, bounded by 256 IDs/ms/node) and removed misleading "security" and "zero-allocation" claims; added a production checklist (MachineId guidance).
+- Removed links to files that do not exist; added `ROADMAP.md` and a CI workflow.
+
+### Tests
+- Added configuration, validation and multi-threaded uniqueness tests; removed a duplicated project reference; test classes sharing static state now run serially.
