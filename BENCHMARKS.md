@@ -12,42 +12,27 @@ Host Processor: 13th Gen Intel Core i7-13700HX (24 logical, 16 physical cores)
 
 ---
 
-## ⚡ Generation Speed (Single Call / Micro-Benchmark)
+## ⚠️ Correction (1.0.5)
 
-Comparison between `Zid.Next()` and standard .NET ID generators:
+Earlier versions of this file reported `Zid.Next()` at "~4.21 ns" and a "Zid_Next_Batch" of 7,214 µs for 100 IDs. These do not match how the generator behaves: the layout allows at most **256 IDs per millisecond per node**, so *sustained* generation cannot average below ~3.9 µs per ID. The "4.21" figure appears to be in µs, not ns. The values below replace them. Please re-run BenchmarkDotNet (`cd src/EssaLab.Zid.Benchmarks && dotnet run -c Release`) on your hardware and update the table before quoting numbers elsewhere.
+
+## ⚡ Sustained generation (Stopwatch, 1,000,000 consecutive `Zid.Next()` calls, single thread)
+
+Measured on Linux (container), .NET 10: **~217k-231k IDs/sec, ~4.3-4.6 µs per ID**, 0 B allocated. This is the real-world ceiling per node/process; scale out with distinct `MachineId`s.
+
+## 📦 String formatting & Base62 encoding (BenchmarkDotNet, i7-13700HX, Windows 11, .NET 10)
 
 | Method | Mean | Error | StdDev | Gen 0 | Allocated |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **`Zid.Next()`** | **~4.21 ns** | - | - | - | **0 B** |
+| `Zid.ToShort()` | 33.25 ns | 0.71 ns | 0.65 ns | 0.0030 | 48 B |
+| `Zid.TryParse()` | 23.01 ns | 0.26 ns | 0.24 ns | - | 0 B |
 | `Guid.NewGuid()` | 36.66 ns | 0.31 ns | 0.29 ns | - | 0 B |
 
----
+`ToShort()` allocates only the resulting `string`; use `TryFormat` with format `"S"` for a fully allocation-free path.
 
-## 📦 String Formatting & Base62 Encoding
+## 🎯 Key takeaways
 
-Zero heap allocation string formatting and parsing benchmark:
-
-| Method | Mean | Error | StdDev | Gen 0 | Allocated |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **`Zid.ToShort()`** | **33.25 ns** | 0.71 ns | 0.65 ns | 0.0030 | 48 B |
-| **`Zid.TryParse()`** | **23.01 ns** | 0.26 ns | 0.24 ns | - | **0 B** |
-
----
-
-## 🔄 Multi-Threaded & Batch Workload Analysis
-
-Evaluating concurrency and lock-free thread safety under parallel execution (Batch Size = 100):
-
-| Method | Mean | Allocated | Notes |
-| :--- | :--- | :--- | :--- |
-| `Standard_Guid_Batch` | 10.72 μs | 4.96 KB | Independent random GUID generation |
-| **`Zid_Next_Batch`** | **7,214.84 μs** | 5.10 KB | Lock-free sequence management (Protected by 256 IDs/ms node threshold) |
-
----
-
-## 🎯 Key Takeaways
-
-1. **Zero Allocations & High Speed:** `Zid.Next()` executes in single-digit nanoseconds with zero heap allocation (`0 B`) in single-thread scenarios.
-2. **Lock-Free Thread Safety:** Built with `Interlocked.CompareExchange` and `SpinWait` to handle concurrent thread requests safely without deadlocks.
-3. **Database Efficiency:** 64-bit time-sortable integer layout prevents B-Tree index fragmentation in Entity Framework Core.
-4. **Predictable Sequence Limits:** Enforces a strict 256 IDs/millisecond per node rate limit to guarantee chronological uniqueness. For extreme multi-node distributed environments, scale-out is easily managed via `MachineId`.
+1. **Throughput is layout-bound:** 256 IDs/ms/node (~250k/s). It is not a nanosecond-class generator under sustained load.
+2. **Allocation-free generation and parsing**; only `ToShort()` allocates its result string.
+3. **Time-sortable 64-bit values** keep B-Tree inserts mostly sequential in EF Core.
+4. **Scale-out** is done with distinct `MachineId`s (0..1023).

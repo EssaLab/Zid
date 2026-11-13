@@ -7,12 +7,16 @@
 
     <!-- NuGet -->
     <PackageId>EssaLab.Zid</PackageId>
-    <Description>Enterprise-Grade Distributed ID Generator (High-Performance, Zero-Allocation, Time-sortable).</Description>
+    <Description>Lock-free distributed 64-bit ID generator (Snowflake-based, time-sortable, Base62 short codes).</Description>
     <PackageTags>id-generator;snowflake;distributed-id;csharp;high-performance;base62</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>
   
+  <ItemGroup>
+    <InternalsVisibleTo Include="EssaLab.Zid.Tests" />
+  </ItemGroup>
+
   <ItemGroup>
     <None Include="README.md" Pack="true" PackagePath="\" />
   </ItemGroup>

@@ -15,46 +15,94 @@ public readonly struct Zid : IEquatable<Zid>, IComparable<Zid>, ISpanFormattable
     private const int SequenceBits = 8;    
     private const int ChecksumBits = 4;    
 
-    private const long MaxMachineId = (1L << MachineIdBits) - 1;
+    /// <summary>The highest machine/node identifier that fits in the layout (1023).</summary>
+    public const long MaxMachineId = (1L << MachineIdBits) - 1;
     private const long MaxSequence = (1L << SequenceBits) - 1;
     private const int ChecksumMask = (1 << ChecksumBits) - 1;
-    private const long MaxTimestamp = (1L << TimestampBits) - 1;
+    internal const long MaxTimestamp = (1L << TimestampBits) - 1;
 
     private const int ShiftSequence = ChecksumBits;
     private const int ShiftMachine = SequenceBits + ChecksumBits;
     private const int ShiftTimestamp = MachineIdBits + SequenceBits + ChecksumBits;
 
-    private static DateTimeOffset _epochOffset = new(2024, 1, 1, 0, 0, 0, TimeSpan.Zero);
-    private static long _epochMs = _epochOffset.ToUnixTimeMilliseconds();
-    private static long _machineId;
-    private static long _maskKey = 0x5D3759DF12345678;
-    private static bool _isInitialized = false;
+    private static readonly DateTimeOffset DefaultEpoch = new(2024, 1, 1, 0, 0, 0, TimeSpan.Zero);
+    private const long DefaultMaskKey = 0x5D3759DF12345678;
+
+    private static readonly object InitLock = new();
+    private static DateTimeOffset _epochOffset = DefaultEpoch;
+    private static long _epochMs = DefaultEpoch.ToUnixTimeMilliseconds();
+    private static long _machineId = -1;            // -1 = not resolved yet (resolved lazily on first Next())
+    private static long _maskKey = DefaultMaskKey;
+    private static volatile bool _used;             // true once Next() has issued (or begun issuing) IDs
 
     private static long _state;
-
-    static Zid()
-    {
-        Initialize(new ZidOptions());
-    }
 
     /// <summary>
     /// Initializes the Zid generator globally with custom configuration options.
     /// </summary>
+    /// <remarks>
+    /// Must be called before the first <see cref="Next"/>. Once IDs have been generated the configuration is frozen:
+    /// calling this again with identical settings is a harmless no-op, while conflicting settings throw
+    /// <see cref="InvalidOperationException"/> instead of being silently ignored (set <c>ZID_ALLOW_REINIT=true</c>
+    /// to bypass this in tests only).
+    /// </remarks>
     /// <param name="options">Configuration options instance.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="options"/> is null.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">An option value is invalid (see <see cref="ZidOptions.Validate"/>).</exception>
+    /// <exception cref="InvalidOperationException">The generator is already in use with different settings.</exception>
     public static void Initialize(ZidOptions options)
     {
-        if (_isInitialized && Environment.GetEnvironmentVariable("ZID_ALLOW_REINIT") != "true")
-            return;
+        ArgumentNullException.ThrowIfNull(options);
+        options.Validate();
 
-        _epochOffset = options.Epoch;
-        _epochMs = _epochOffset.ToUnixTimeMilliseconds();
-        _maskKey = options.MaskKey;
-        _machineId = options.MachineId ?? ResolveMachineId();
+        lock (InitLock)
+        {
+            if (_used && Environment.GetEnvironmentVariable("ZID_ALLOW_REINIT") != "true")
+            {
+                if (IsCompatible(options)) return;
+                throw new InvalidOperationException(
+                    "Zid has already generated IDs with a different configuration. " +
+                    "Call Zid.Initialize / AddZid before the first Zid.Next() and never change Epoch, MachineId or MaskKey afterwards.");
+            }
 
-        long initialTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - _epochMs;
-        if (initialTime < 0) initialTime = 0;
-        _state = (initialTime << SequenceBits);
-        _isInitialized = true;
+            // Resolve everything first so a failure leaves the previous state untouched.
+            long machineId = options.MachineId ?? ResolveMachineId();
+            DateTimeOffset epoch = options.Epoch.ToUniversalTime();
+
+            _epochOffset = epoch;
+            _epochMs = epoch.ToUnixTimeMilliseconds();
+            _maskKey = options.MaskKey;
+            _machineId = machineId;
+            _state = 0;
+        }
+    }
+
+    private static bool IsCompatible(ZidOptions o) =>
+        o.Epoch.ToUnixTimeMilliseconds() == _epochMs
+        && o.MaskKey == _maskKey
+        && (o.MachineId is null || o.MachineId == _machineId);
+
+    private static long EnsureMachineId()
+    {
+        lock (InitLock)
+        {
+            if (_machineId < 0) _machineId = ResolveMachineId();
+            return _machineId;
+        }
+    }
+
+    /// <summary>Restores pristine defaults. Test-only seam (internal).</summary>
+    internal static void ResetForTests()
+    {
+        lock (InitLock)
+        {
+            _epochOffset = DefaultEpoch;
+            _epochMs = DefaultEpoch.ToUnixTimeMilliseconds();
+            _maskKey = DefaultMaskKey;
+            _machineId = -1;
+            _state = 0;
+            _used = false;
+        }
     }
 
     /// <summary>
@@ -106,9 +154,14 @@ public readonly struct Zid : IEquatable<Zid>, IComparable<Zid>, ISpanFormattable
     /// </summary>
     /// <returns>A unique <see cref="Zid"/> instance.</returns>
     /// <exception cref="OverflowException">Thrown when the timestamp epoch limit is reached.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when <c>ZID_MACHINE_ID</c> is invalid or the system clock is before the epoch.</exception>
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     public static Zid Next()
     {
+        long machineId = _machineId;
+        if (machineId < 0) machineId = EnsureMachineId();
+        if (!_used) _used = true;
+
         SpinWait spin = new();
         while (true)
         {
@@ -117,6 +170,9 @@ public readonly struct Zid : IEquatable<Zid>, IComparable<Zid>, ISpanFormattable
             long sequence = currentState & MaxSequence;
 
             long currentTimestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - _epochMs;
+
+            if (currentTimestamp < 0)
+                throw new InvalidOperationException("The system clock is earlier than the configured Zid epoch.");
 
             if (currentTimestamp < lastTimestamp) currentTimestamp = lastTimestamp;
 
@@ -146,7 +202,7 @@ public readonly struct Zid : IEquatable<Zid>, IComparable<Zid>, ISpanFormattable
             if (Interlocked.CompareExchange(ref _state, nextState, currentState) == currentState)
             {
                 long rawId = (nextTimestamp << (MachineIdBits + SequenceBits))
-                           | (_machineId << SequenceBits)
+                           | (machineId << SequenceBits)
                            | nextSequence;
 
                 int checksum = CalculateChecksum(rawId);
@@ -162,9 +218,13 @@ public readonly struct Zid : IEquatable<Zid>, IComparable<Zid>, ISpanFormattable
     private static long ResolveMachineId()
     {
         string? envMachineId = Environment.GetEnvironmentVariable("ZID_MACHINE_ID");
-        if (!string.IsNullOrEmpty(envMachineId) && long.TryParse(envMachineId, out long parsedId))
+        if (!string.IsNullOrWhiteSpace(envMachineId))
         {
-            if (parsedId >= 0 && parsedId <= MaxMachineId) return parsedId;
+            if (long.TryParse(envMachineId, out long parsedId) && parsedId >= 0 && parsedId <= MaxMachineId)
+                return parsedId;
+
+            throw new InvalidOperationException(
+                $"Environment variable ZID_MACHINE_ID must be an integer between 0 and {MaxMachineId}, but was '{envMachineId}'.");
         }
 
         object anchor = new();

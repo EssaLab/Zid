@@ -14,7 +14,7 @@
   <a href="https://github.com/EssaLab/Zid/stargazers"><img src="https://img.shields.io/github/stars/EssaLab/Zid?style=social" alt="GitHub Stars" /></a>
 </p>
 
-**EssaLab.Zid** is an enterprise-grade, lock-free, zero-allocation distributed ID generator for .NET. Inspired by Twitter's Snowflake algorithm, it generates 64-bit time-sortable unique integers optimized for maximum database indexing efficiency, ultra-high throughput, and Base62 URL safety.
+**EssaLab.Zid** is a lock-free distributed ID generator for .NET. Inspired by Twitter's Snowflake algorithm, it generates 64-bit time-sortable unique integers optimized for database indexing efficiency and Base62 URL-friendly short codes.
 
 ---
 
@@ -25,7 +25,7 @@
 - [📦 Installation](#-installation)
 - [🚀 Quick Start](#-quick-start)
 - [📊 Benchmarks](BENCHMARKS.md)
-- [⚙️ Configuration Options](#️-configuration-options)
+- [⚙️ Configuration & Production Checklist](#️-configuration--production-checklist)
 - [🤝 Contributing](CONTRIBUTING.md)
 - [🔒 Security](SECURITY.md)
 - [📜 License](#-license)
@@ -34,12 +34,12 @@
 
 ## 🌟 Key Features
 
-- **⚡ Lock-Free & Ultra High-Performance:** Built with `Interlocked.CompareExchange` to handle millions of concurrent ID generations without thread contention.
-- **📦 Zero Heap Allocation:** Native `readonly struct` utilizing `Span<char>` and `stackalloc` for string formatting and parsing with zero GC pressure.
+- **⚡ Lock-Free:** Built with `Interlocked.CompareExchange`; thread-safe without locks on the hot path. Throughput is capped at **256 IDs per millisecond per node** (~250k IDs/sec) by the bit layout.
+- **📦 Allocation-Free Core:** `Next()`, `TryParse()` and `TryFormat()` (`"S"` format) allocate nothing. `ToShort()` returns a `string`, so it allocates it (48 B).
 - **🗄️ Database Friendly:** Generates 64-bit `long` (`BIGINT`) values that are chronologically sortable (Time-sortable), virtually eliminating clustered index fragmentation.
-- **🔒 Security & Obfuscation:** Built-in XOR masking and 4-bit integrity checksum to prevent sequence prediction and link tampering.
+- **🔎 Light Obfuscation & Typo Detection:** Short codes are XOR-masked and carry a 4-bit checksum that catches *accidental* corruption (about 94% of random errors). This is **not security**: the default mask key is public, the checksum is unkeyed, and IDs reveal creation time and node. Never rely on Zid IDs as secrets; always enforce authorization server-side.
 - **🧩 Modular & Clean Architecture:** Zero external dependencies in the core package. Optional extensions for ASP.NET Core DI and Entity Framework Core.
-- **☁️ Cloud & Container Ready:** Automatically resolves Machine IDs via environment variables (`ZID_MACHINE_ID`) or local entropy.
+- **☁️ Cloud & Container Ready:** Machine ID can come from `ZidOptions.MachineId` or the `ZID_MACHINE_ID` environment variable. Without either, a *random* ID is used, which can collide between replicas (see the production checklist).
 
 ---
 
@@ -93,26 +93,46 @@ DateTimeOffset createdAt = id.Timestamp;
 long machineId = id.MachineId;
 ```
 
-> 📖 For full usage guides including ASP.NET Core and EF Core integration, see the [Documentation Guide](DOCS.md).
+> 📖 For ASP.NET Core and EF Core integration, see the package READMEs: [Dependency Injection](src/EssaLab.Zid.Extensions.DependencyInjection/README.md) and [Entity Framework](src/EssaLab.Zid.EntityFramework/README.md).
+
+---
+
+## ⚙️ Configuration & Production Checklist
+
+```csharp
+Zid.Initialize(new ZidOptions
+{
+    MachineId = 12,                                   // 0..1023, unique per running instance
+    Epoch = new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero),
+    MaskKey = 0x5D3759DF12345678                      // only affects Base62 short codes
+});
+```
+
+- **Initialize before first use.** `Zid.Initialize` (or `AddZid`) must run before the first `Zid.Next()`. After IDs are issued the configuration is frozen: identical settings are a no-op, conflicting settings throw `InvalidOperationException`.
+- **Set `MachineId` explicitly in production.** Every concurrently running instance (pod, VM, process) needs a different value in 0..1023. The automatic fallback is random and collides often: in a test with 10 simultaneously started instances, duplicates appeared in ~30% of runs, and with 40 instances in ~95%. Use `ZidOptions.MachineId` or `ZID_MACHINE_ID` (an invalid value throws instead of being ignored).
+- **Never change `Epoch`, `MachineId` assignment scheme or `MaskKey`** after IDs or short codes have been issued.
+- **Options are validated:** `MachineId` outside 0..1023 or an `Epoch` in the future/before 1970 throws `ArgumentOutOfRangeException`.
+- **Keep clocks sane (NTP).** If the system clock moves backwards, generation waits for it to catch up.
 
 ---
 
 ## 📊 Benchmarks
 
-We run detailed performance benchmarks on every release. Detailed results can be found in [BENCHMARKS.md](BENCHMARKS.md).
+Sustained single-thread generation is bounded by the 256 IDs/ms layout limit, i.e. roughly **4-5 µs per ID (~220k IDs/sec)**. See [BENCHMARKS.md](BENCHMARKS.md) for methodology and caveats.
 
-| Method | Mean | StdDev | Allocated |
-| :--- | :--- | :--- | :--- |
-| **Zid.Next()** | **4.2 ns** | 0.02 ns | **0 B** |
-| **Zid.ToShort()** | **12.8 ns** | 0.07 ns | **0 B** |
-| **Guid.NewGuid()** | **35.4 ns** | 0.19 ns | **0 B** |
+| Method | Mean | Allocated |
+| :--- | :--- | :--- |
+| `Zid.Next()` (sustained, 1M calls) | ~4.3 µs | 0 B |
+| `Zid.ToShort()` | ~33 ns | 48 B |
+| `Zid.TryParse()` | ~23 ns | 0 B |
+| `Guid.NewGuid()` | ~37 ns | 0 B |
 
 ---
 
 ## 🤝 Community & Support
 
-- 🐛 **Found a bug?** Open an issue using our [Bug Report Template](.github/ISSUE_TEMPLATE/bug_report.md).
-- 💡 **Have a feature idea?** Submit a [Feature Request](.github/ISSUE_TEMPLATE/feature_request.md).
+- 🐛 **Found a bug or have an idea?** [Open an issue](https://github.com/EssaLab/Zid/issues).
+- 🗺️ **What's next?** See the [Roadmap](ROADMAP.md).
 - 🛠️ **Want to contribute?** Check out our [Contributing Guidelines](CONTRIBUTING.md).
 
 ---
